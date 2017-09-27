@@ -109,7 +109,6 @@ function setup () {
 }
 
 function mousePressed(){
-	console.log(mouseX,mouseY);
 	if (!drawing && !contains().length){ //starts new polygon
 			drawing=true;
 			var point=new THREE.Vector3 (mouseX,mouseY,0);
@@ -155,12 +154,20 @@ function mouseDragged() {
 	if (selected && !drawing)
 		if (selected.parent.type=="Mesh"){ //rotate
 			var pos=new THREE.Vector4(pins[selected.parent.parent.uuid+selected.uuid].x,pins[selected.parent.parent.uuid+selected.uuid].y,0,1);
-			pos.applyMatrix4(selected.parent.matrixWorld);
-			console.log(pos);
+			var posMouse0=new THREE.Vector4(mouseX0,mouseY0,0,1);
+			var posMouse=new THREE.Vector4(mouseX,mouseY,0,1);
+			var m=new THREE.Matrix4();
+			m.getInverse(selected.matrix);
+			pos.applyMatrix4(m);
+			var m2=new THREE.Matrix4();
+			m2.getInverse(selected.parent.matrixWorld);
+			m.multiply(m2);
+			posMouse0.applyMatrix4(m);
+			posMouse.applyMatrix4(m);
 			selected.translateX(pos.x); //brings back to original position (order must be inversed)
 			selected.translateY(pos.y);
-			var v0=new THREE.Vector3(mouseX0-pos.x,mouseY0-pos.y,0);
-			var v=new THREE.Vector3(mouseX-pos.x,mouseY-pos.y,0);
+			var v0=new THREE.Vector3(posMouse0.x-pos.x,posMouse0.y-pos.y,0);
+			var v=new THREE.Vector3(posMouse.x-pos.x,posMouse.y-pos.y,0);
 			var angle=v0.angleTo(v);
 			angle*=Math.sign(v0.cross(v).z); //gets rotation direction
 			if (angle!=NaN) selected.rotateZ(angle); //rotates selected polygon
