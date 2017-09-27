@@ -21,7 +21,7 @@ function init() {
 	camera.lookAt (new THREE.Vector3 (0,0,0));
 
 	// Renderer will use a canvas taking the whole window
-	renderer = new THREE.WebGLRenderer( {antialias: true, alpha: true});
+	renderer = new THREE.WebGLRenderer( {antialias: true, alpha: true}); /////alpha: true allows background color to be white
 	renderer.sortObjects = false;
 	renderer.setPixelRatio( window.devicePixelRatio );
 	renderer.setSize( width, height );
@@ -105,7 +105,7 @@ var mouseX0, mouseY0; //'old' mouse coordinates needed to obtain mouse shift
 var pins={}; //associative array of pins: associates each pair parent+children of polygons to a dictionary with its pin's information
 
 function setup () {
-	document.addEventListener('dblclick', pin);
+	document.addEventListener('dblclick', pin); //binds double click to pin function
 }
 
 function mousePressed(){
@@ -140,7 +140,7 @@ function mousePressed(){
 	}
 }
 
-function mouseMoved(){
+function mouseMoved(){ //updates line being drawn from last point positioned to mouse cursor
 	if (drawing){
 		var point = new THREE.Vector3 (mouseX,mouseY,0);
 		var geometry = new THREE.Geometry();
@@ -189,7 +189,7 @@ function mouseDragged() {
 	mouseY0=mouseY;
 }
 
-function mouseReleased() {
+function mouseReleased() { //resets variable indicating no polygon is being moved
 	selected=0;
 }
 
