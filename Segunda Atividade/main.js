@@ -102,7 +102,7 @@ var drawingPolyLine; //polygonal bordar while baing drawed
 var currentColor; //color randomly picked for new polygon
 var polygons=[]; //array of polygons
 var mouseX0, mouseY0; //'old' mouse coordinates needed to obtain mouse shift
-var pins={}; //associative array of pins: associates each pair parent+children of polygons to a dictionary with its pin's information
+var pins={}; //associative array of pins: associates each pair polygon to a dictionary with its parent pin's information
 
 function setup () {
 	document.addEventListener('dblclick', pin); //binds double click to pin function
@@ -153,7 +153,7 @@ function mouseMoved(){ //updates line being drawn from last point positioned to 
 function mouseDragged() {
 	if (selected && !drawing)
 		if (selected.parent.type=="Mesh"){ //rotate
-			var pos=new THREE.Vector4(pins[selected.parent.parent.uuid+selected.uuid].x,pins[selected.parent.parent.uuid+selected.uuid].y,0,1);
+			var pos=new THREE.Vector4(pins[selected.uuid].x,pins[selected.uuid].y,0,1);
 			var posMouse0=new THREE.Vector4(mouseX0,mouseY0,0,1);
 			var posMouse=new THREE.Vector4(mouseX,mouseY,0,1);
 			var m=new THREE.Matrix4();
@@ -233,13 +233,13 @@ function pin(){
 			containers[containers.length-1].object.parent=pin;
 			containers[containers.length-1].object.children.push(pin2);
 			pin2.parent=containers[containers.length-1].object;
-			pins[containers[containers.length-2].object.uuid+containers[containers.length-1].object.uuid]={back:pin,front:pin2,x:posBack.x,y:posBack.y};
+			pins[containers[containers.length-1].object.uuid]={back:pin,front:pin2,x:posBack.x,y:posBack.y};
 		}
 		else{ //removes pin
-			var pin=pins[containers[containers.length-1].object.parent.parent.uuid+containers[containers.length-1].object.uuid];
+			var pin=pins[containers[containers.length-1].object.uuid];
 			containers[containers.length-1].object.children.splice(containers[containers.length-1].object.children.indexOf(pin.front),1);
 			containers[containers.length-1].object.parent.parent.children.splice(containers[containers.length-1].object.parent.parent.children.indexOf(pin.back),1);
-			delete pins[containers[containers.length-1].object.parent.parent.uuid+containers[containers.length-1].object.uuid];
+			delete pins[containers[containers.length-1].object.uuid];
 			containers[containers.length-1].object.applyMatrix(containers[containers.length-1].object.parent.parent.matrixWorld);
 			containers[containers.length-1].object.parent=scene;
 		}
