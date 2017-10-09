@@ -184,7 +184,7 @@ function mouseDragged() {
 			selected.translateY(pos.y);
 		}
 	else if (contains().length && !drawing) //first call after pressing, right before dragging
-			selected=contains()[contains().length-1].object;
+			selected=contains()[contains().length-1];
 	mouseX0=mouseX;
 	mouseY0=mouseY;
 }
@@ -194,11 +194,32 @@ function mouseReleased() { //resets variable indicating no polygon is being move
 }
 
 function contains(){ //returns array with all polygons under mouse cursor
-	var x=(event.clientX/window.innerWidth)*2-1; //x normalization
-	var y=-(event.clientY/window.innerHeight)*2+1; //y normalization
-	var raycaster=new THREE.Raycaster();
-	raycaster.setFromCamera(new THREE.Vector3(x,y,0), camera);
-	return raycaster.intersectObjects(polygons);
+	var checkSum = 0;
+	var intersect = [];
+	var currentMouse = new THREE.Vector3(mouseX, mouseY, 0);
+	for (i = 0; i < polygons.length; i++) {
+		var polygon = polygons[i];
+		var vertices = polygon.geometry.vertices;
+		for (j = 0; j < vertices.length; j++){
+			var vec1 = new THREE.Vector3();
+			var vec2 = new THREE.Vector3();
+			vec1.copy(vertices[j]);
+			if (j == vertices.length -1){ vec2.copy(vertices[0]); }
+			else{ vec2.copy(vertices[j+1]); }
+			vec1.applyMatrix4(polygon.matrixWorld); 
+			vec2.applyMatrix4(polygon.matrixWorld); 
+			vec1.sub(currentMouse);
+			vec2.sub(currentMouse);
+			var orientation = new THREE.Vector3().crossVectors(vec1, vec2);
+			var aux = Math.sign(-orientation.z);
+			checkSum += vec1.angleTo(vec2)*aux;
+		}
+		if ((checkSum > 6.1) && (checkSum < 6,3)){
+			intersect.push(polygons[i]);
+		}
+		checkSum = 0;
+	}
+	return intersect;
 }
 
 function pin(){
@@ -206,15 +227,15 @@ function pin(){
 	if (containers.length>0){
 		if (containers.length==1) //prepares array in case pinning on background/scene
 			containers=[{object:scene},containers[containers.length-1]];
-		if (containers[containers.length-1].object.parent.type!="Mesh"){ //inserts pin
+		if (containers[containers.length-1].parent.type!="Mesh"){ //inserts pin
 			var posFront=new THREE.Vector4(mouseX,mouseY,0,1);
 			var posBack=new THREE.Vector4(mouseX,mouseY,0,1);
 			var m=new THREE.Matrix4();
-			m.getInverse(containers[containers.length-1].object.matrixWorld);
+			m.getInverse(containers[containers.length-1].matrixWorld);
 			posFront.applyMatrix4(m);
-			m.getInverse(containers[containers.length-2].object.matrixWorld);
+			m.getInverse(containers[containers.length-2].matrixWorld);
 			posBack.applyMatrix4(m);
-			containers[containers.length-1].object.applyMatrix(m); //changes polygon base to his parent's base
+			containers[containers.length-1].applyMatrix(m); //changes polygon base to his parent's base
 			var curve=new THREE.EllipseCurve(posBack.x,posBack.y,5,5,0,2*Math.PI,false,0); //creates back pin
 			var path=new THREE.Path(curve.getPoints(64));
 			var geometry=path.createPointsGeometry(64);
@@ -227,21 +248,21 @@ function pin(){
 			var shape2=new THREE.Shape(geometry2.vertices);
 			var shapeGeometry2=new THREE.ShapeGeometry(shape2);
 			var pin2=new THREE.Mesh(shapeGeometry2,new THREE.MeshBasicMaterial({color:0xc0c0c0, side:THREE.DoubleSide}));
-			containers[containers.length-2].object.children.push(pin);
-			pin.parent=containers[containers.length-2].object;
-			pin.children.push(containers[containers.length-1].object);
-			containers[containers.length-1].object.parent=pin;
-			containers[containers.length-1].object.children.push(pin2);
-			pin2.parent=containers[containers.length-1].object;
-			pins[containers[containers.length-1].object.uuid]={back:pin,front:pin2,x:posBack.x,y:posBack.y};
+			containers[containers.length-2].children.push(pin);
+			pin.parent=containers[containers.length-2];
+			pin.children.push(containers[containers.length-1]);
+			containers[containers.length-1].parent=pin;
+			containers[containers.length-1].children.push(pin2);
+			pin2.parent=containers[containers.length-1];
+			pins[containers[containers.length-1].uuid]={back:pin,front:pin2,x:posBack.x,y:posBack.y};
 		}
 		else{ //removes pin
-			var pin=pins[containers[containers.length-1].object.uuid];
-			containers[containers.length-1].object.children.splice(containers[containers.length-1].object.children.indexOf(pin.front),1);
-			containers[containers.length-1].object.parent.parent.children.splice(containers[containers.length-1].object.parent.parent.children.indexOf(pin.back),1);
-			delete pins[containers[containers.length-1].object.uuid];
-			containers[containers.length-1].object.applyMatrix(containers[containers.length-1].object.parent.parent.matrixWorld);
-			containers[containers.length-1].object.parent=scene;
+			var pin=pins[containers[containers.length-1].uuid];
+			containers[containers.length-1].children.splice(containers[containers.length-1].children.indexOf(pin.front),1);
+			containers[containers.length-1].parent.parent.children.splice(containers[containers.length-1].parent.parent.children.indexOf(pin.back),1);
+			delete pins[containers[containers.length-1].uuid];
+			containers[containers.length-1].applyMatrix(containers[containers.length-1].parent.parent.matrixWorld);
+			containers[containers.length-1].parent=scene;
 		}
 	}
 }
