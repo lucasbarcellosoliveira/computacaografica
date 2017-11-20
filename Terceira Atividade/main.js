@@ -3,9 +3,11 @@ var camera, scene, renderer;
 var mouseX = 0, mouseY = 0;
 var windowHalfX = window.innerWidth / 2;
 var windowHalfY = window.innerHeight / 2;
-init();
-animate();
 var lamp; //object shown
+var animating=false; //true if animation is playing
+var nframes=20; //maximum number of keyframes
+var keyframePos=[]; //object position in each keyframe
+init();
 function init() {
 	container = document.createElement( 'div' );
 	document.body.appendChild( container );
@@ -38,7 +40,7 @@ function init() {
 	//
 	renderer = new THREE.WebGLRenderer();
 	renderer.setPixelRatio( window.devicePixelRatio );
-	renderer.setSize( window.innerWidth-20, window.innerHeight-20 );
+	renderer.setSize( window.innerWidth-20, window.innerHeight-50 );
 	container.appendChild( renderer.domElement );
 	//
 	window.addEventListener( 'resize', onWindowResize, false );
@@ -69,27 +71,28 @@ function init() {
 	setup();
 	// First render
 	render();
+	for (var i=0; i<nframes; i++){
+		var button = document.createElement("btn");
+		button.setAttribute("id", "keyframe"+i);
+		button.setAttribute("class", "button");
+		button.addEventListener("click", keyframeClicked.bind(null, i));
+		document.getElementById("keyframes").appendChild(button);
+	}
 }
 function onWindowResize() {
 	windowHalfX = window.innerWidth / 2;
 	windowHalfY = window.innerHeight / 2;
 	camera.aspect = window.innerWidth / window.innerHeight;
 	camera.updateProjectionMatrix();
-	renderer.setSize( window.innerWidth-20, window.innerHeight-20 );
+	renderer.setSize( window.innerWidth-20, window.innerHeight-50 );
 }
 function onDocumentMouseMove( event ) {
 	mouseX = ( event.clientX - windowHalfX ) / 2;
 	mouseY = ( event.clientY - windowHalfY ) / 2;
 }
 //
-function animate() {
-	requestAnimationFrame( animate );
-	render();
-}
 function render() {
-	camera.position.x += ( mouseX - camera.position.x ) * .05;
-	camera.position.y += ( - mouseY - camera.position.y ) * .05;
-	camera.lookAt( scene.position );
+	requestAnimationFrame( render );
 	renderer.render( scene, camera );
 }
 function mouseMoved(){}
@@ -119,6 +122,8 @@ function keyPressed(event){
 			break;
 		case 40: //down arrow pressed
 			lamp.position.y-=0.5;
+		case 32: //space bar pressed
+			animating=!animating;
 	}
 }
 function wheelRolled(event){
@@ -126,4 +131,14 @@ function wheelRolled(event){
 		lamp.position.z+=0.5;
 	else //zoom out
 		lamp.position.z-=0.5;
+}
+function keyframeClicked(index){
+	if (keyframePos[index]){
+		keyframePos[index]=null;
+		document.getElementById("keyframe"+index).setAttribute("class", "button");
+	}
+	else{
+		keyframePos[index]=new THREE.Vector3(lamp.position.x,lamp.position.y,lamp.position.z);
+		document.getElementById("keyframe"+index).setAttribute("class", "button selected");
+	}
 }
