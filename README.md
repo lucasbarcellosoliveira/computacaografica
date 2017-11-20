@@ -4,3 +4,5 @@ Atividades propostas na disciplina "Computação Gráfica" no semestre de 2017.2
 Primeira Atividade: Detecção de interseções entre segmentos de reta utilizando p5.js.
 
 Segunda Atividade: Translação e rotação (fundamentos de sistemas de coordenadas e mudanças de bases) de polígonos utilizando three.js.
+
+Terceira Atividade: Visualizador de objetos (tipo .OBJ) com criador de animações geradas por interpolações entre quadros-chave (keyframes) também utilizando three.js.
