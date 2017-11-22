@@ -3,28 +3,27 @@ var camera, scene, renderer;
 var mouseX = 0, mouseY = 0;
 var windowHalfX = window.innerWidth / 2;
 var windowHalfY = window.innerHeight / 2;
-var lamp; //object shown
+var myobject; //object shown
 var animating=false; //true if animation is playing
 var nframes=20; //maximum number of keyframes
-var keyframePos=[]; //object position in each keyframe
+var keyframePos={}; //object position in each keyframe
+var interpolationsteps=10; //number of positions between keyframes
 init();
 function init() {
+	//based on three.js example
 	container = document.createElement( 'div' );
 	document.body.appendChild( container );
 	camera = new THREE.PerspectiveCamera( 45, window.innerWidth / window.innerHeight, 1, 2000 );
 	camera.position.z = 20;
-	// scene
-	scene = new THREE.Scene();
+	scene = new THREE.Scene(); //scene
 	var ambientLight = new THREE.AmbientLight( 0xffffff, 1.0 );
 	scene.add( ambientLight );
 	var pointLight = new THREE.PointLight( 0xffffff, 2.0 );
 	camera.add( pointLight );
 	scene.add( camera );
-	// texture
-	var textureLoader = new THREE.TextureLoader();
+	var textureLoader = new THREE.TextureLoader(); //texture
 	var texture = textureLoader.load( 'stone.jpg' );
-	// model
-	var loader = new THREE.OBJLoader();
+	var loader = new THREE.OBJLoader(); //model
 	loader.load( 'lamp.obj', function ( object ) {
 		object.traverse( function ( child ) {
 			if ( child instanceof THREE.Mesh ) {
@@ -35,18 +34,14 @@ function init() {
 		object.position.y=-2;
 		object.position.z=0;
 		scene.add( object );
-		lamp=object; //keeps reference to it
+		myobject=object; //keeps reference to it
 	});
-	//
 	renderer = new THREE.WebGLRenderer();
 	renderer.setPixelRatio( window.devicePixelRatio );
 	renderer.setSize( window.innerWidth-20, window.innerHeight-50 );
 	container.appendChild( renderer.domElement );
-	//
 	window.addEventListener( 'resize', onWindowResize, false );
-	// Set up mouse callbacks. 
-	// Call mousePressed, mouseDragged and mouseReleased functions if defined.
-	// Arrange for global mouse variables to be set before calling user callbacks.
+	// based on previous assignment
 	mouseIsPressed = false;
 	mouseX = 0;
 	mouseY = 0;
@@ -69,31 +64,29 @@ function init() {
 		mouseReleased(); 
 	});
 	setup();
-	// First render
 	render();
-	for (var i=0; i<nframes; i++){
+	for (var i=0; i<nframes; i++){ //adds buttons to page and initializes them
 		var button = document.createElement("btn");
-		button.setAttribute("id", "keyframe"+i);
-		button.setAttribute("class", "button");
-		button.addEventListener("click", keyframeClicked.bind(null, i));
+		button.setAttribute("id","keyframe"+i);
+		button.setAttribute("class","button");
+		button.addEventListener("click", keyframeClicked.bind(null,i));
 		document.getElementById("keyframes").appendChild(button);
 	}
 }
 function onWindowResize() {
-	windowHalfX = window.innerWidth / 2;
-	windowHalfY = window.innerHeight / 2;
-	camera.aspect = window.innerWidth / window.innerHeight;
+	windowHalfX=window.innerWidth/2;
+	windowHalfY=window.innerHeight/2;
+	camera.aspect=window.innerWidth/window.innerHeight;
 	camera.updateProjectionMatrix();
-	renderer.setSize( window.innerWidth-20, window.innerHeight-50 );
+	renderer.setSize(window.innerWidth-20,window.innerHeight-50);
 }
-function onDocumentMouseMove( event ) {
-	mouseX = ( event.clientX - windowHalfX ) / 2;
-	mouseY = ( event.clientY - windowHalfY ) / 2;
+function onDocumentMouseMove(event) {
+	mouseX = (event.clientX-windowHalfX)/2;
+	mouseY = (event.clientY-windowHalfY)/2;
 }
-//
 function render() {
-	requestAnimationFrame( render );
-	renderer.render( scene, camera );
+	requestAnimationFrame(render);
+	renderer.render(scene,camera);
 }
 function mouseMoved(){}
 function mousePressed(){
@@ -112,33 +105,60 @@ function setup(){
 function keyPressed(event){
 	switch(event.keyCode){
 		case 37: //left arrow pressed
-			lamp.position.x-=0.5;
+			myobject.position.x-=0.5;
 			break;
 		case 38: //up arrow pressed
-			lamp.position.y+=0.5;
+			myobject.position.y+=0.5;
 			break;
 		case 39: //right arrow pressed
-			lamp.position.x+=0.5;
+			myobject.position.x+=0.5;
 			break;
 		case 40: //down arrow pressed
-			lamp.position.y-=0.5;
-		case 32: //space bar pressed
+			myobject.position.y-=0.5;
+			break;
+		default: //toggle animation
 			animating=!animating;
+			animate();
 	}
 }
 function wheelRolled(event){
 	if (event.deltaY<0) //zoom in
-		lamp.position.z+=0.5;
+		myobject.position.z+=0.5;
 	else //zoom out
-		lamp.position.z-=0.5;
+		myobject.position.z-=0.5;
 }
 function keyframeClicked(index){
-	if (keyframePos[index]){
+	if (keyframePos[index]){ //if button is already selected
 		keyframePos[index]=null;
 		document.getElementById("keyframe"+index).setAttribute("class", "button");
 	}
-	else{
-		keyframePos[index]=new THREE.Vector3(lamp.position.x,lamp.position.y,lamp.position.z);
+	else{ //if button is not selected yet
+		keyframePos[index]=new THREE.Vector3(myobject.position.x,myobject.position.y,myobject.position.z);
 		document.getElementById("keyframe"+index).setAttribute("class", "button selected");
 	}
+}
+async function animate(){ //interpolate and animate
+	var next, start=0;
+	while (keyframePos[start]==undefined){
+		next++;
+		if (next>=nframes) //no keyframe selected
+			return;
+	}
+	while(animating){
+		myobject.position=keyframePos[start];
+		next=start+1;
+		while (keyframePos[next]==undefined){ //finds next keyframe
+			next++;
+			if (next==nframes)
+				next=0;
+		}
+		for (var j=1;j<=interpolationsteps;j++){
+			myobject.position.lerp(keyframePos[next],j/interpolationsteps); //linear interpolation for translation
+			await sleep(10); //waits 10ms between frames
+		}
+		start=next;
+	}
+}
+function sleep(ms) { //allows waiting between frames
+  return new Promise(resolve => setTimeout(resolve, ms));
 }
