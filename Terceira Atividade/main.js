@@ -6,8 +6,9 @@ var windowHalfY = window.innerHeight / 2;
 var myobject; //object shown
 var animating=false; //true if animation is playing
 var nframes=20; //maximum number of keyframes
-var keyframePos={}; //object position in each keyframe
 var interpolationsteps=10; //number of positions between keyframes
+var keyframePos={}; //object position in each keyframe
+var keyframeQuat={}; //object quaternion in each keyframe
 init();
 function init() {
 	//based on three.js example
@@ -133,7 +134,8 @@ function keyframeClicked(index){
 		document.getElementById("keyframe"+index).setAttribute("class", "button");
 	}
 	else{ //if button is not selected yet
-		keyframePos[index]=new THREE.Vector3(myobject.position.x,myobject.position.y,myobject.position.z);
+		keyframePos[index]=new THREE.Vector3(myobject.position.x,myobject.position.y,myobject.position.z); //stores current position
+		keyframeQuat[index]=new THREE.Quaternion(myobject.quaternion.x,myobject.quaternion.y,myobject.quaternion.z,myobject.quaternion.w); //stores current quaternion
 		document.getElementById("keyframe"+index).setAttribute("class", "button selected");
 	}
 }
@@ -154,6 +156,7 @@ async function animate(){ //interpolate and animate
 		}
 		for (var j=1;j<=interpolationsteps;j++){
 			myobject.position.lerp(keyframePos[next],j/interpolationsteps); //linear interpolation for translation
+			myobject.quaternion.slerp(keyframeQuat[next],j/interpolationsteps); //spherical linear interpolation for rotation
 			await sleep(10); //waits 10ms between frames
 		}
 		start=next;
