@@ -130,7 +130,7 @@ function wheelRolled(event){
 }
 function keyframeClicked(index){
 	if (keyframePos[index]){ //if button is already selected
-		keyframePos[index]=null;
+		keyframePos[index]=undefined;
 		document.getElementById("keyframe"+index).setAttribute("class", "button");
 	}
 	else{ //if button is not selected yet
@@ -142,8 +142,8 @@ function keyframeClicked(index){
 async function animate(){ //interpolate and animate
 	var next, start=0;
 	while (keyframePos[start]==undefined){
-		next++;
-		if (next>=nframes) //no keyframe selected
+		start++;
+		if (start>=nframes) //no keyframe selected
 			return;
 	}
 	while(animating){
