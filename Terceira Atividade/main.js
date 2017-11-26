@@ -93,6 +93,7 @@ function mouseDragged(){
 	var pmouse=new THREE.Vector3(pmouseX,pmouseY,0);
 	var quat=new THREE.Quaternion();
 	if (mouse.lengthSq()>0.25){ //simple rotation
+		if (isNaN(mouse.angleTo(pmouse))) return;
 		quat.setFromAxisAngle(new THREE.Vector3(0,0,1),mouse.angleTo(pmouse)*Math.sign(mouse.cross(pmouse).z)); //multiplication must be in this order as .cross alters mouse variable
 		
 	}
@@ -103,7 +104,9 @@ function mouseDragged(){
 		pmouse.z=Math.sqrt(0.25-pmouse.lengthSq());
 		var axis=new THREE.Vector3();
 		axis.copy(mouse);
-		quat.setFromAxisAngle(axis.cross(pmouse).normalize(),mouse.angleTo(pmouse));
+		axis.cross(pmouse).normalize();
+		if (isNaN(mouse.angleTo(pmouse)) || isNaN(axis.x==NaN) || isNaN(axis.y==NaN) || isNaN(axis.z==NaN)) return;
+		quat.setFromAxisAngle(axis,mouse.angleTo(pmouse));
 	}
 	myobject.applyQuaternion(quat);
 }
