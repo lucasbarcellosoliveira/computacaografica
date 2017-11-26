@@ -1,8 +1,8 @@
 var container;
 var camera, scene, renderer;
-var mouseX = 0, mouseY = 0;
-var windowHalfX = window.innerWidth / 2;
-var windowHalfY = window.innerHeight / 2;
+var mouseX = 0, mouseY = 0, pmouseX=0, pmouseY=0;
+var windowHalfX = (window.innerWidth-20) / 2;
+var windowHalfY = (window.innerHeight-50) / 2;
 var myobject; //object shown
 var animating=false; //true if animation is playing
 var nframes=20; //maximum number of keyframes
@@ -14,7 +14,7 @@ function init() {
 	//based on three.js example
 	container = document.createElement( 'div' );
 	document.body.appendChild( container );
-	camera = new THREE.PerspectiveCamera( 45, window.innerWidth / window.innerHeight, 1, 2000 );
+	camera = new THREE.PerspectiveCamera( 45, (window.innerWidth-20) / (window.innerHeight-50), 1, 2000 );
 	camera.position.z = 20;
 	scene = new THREE.Scene(); //scene
 	var ambientLight = new THREE.AmbientLight( 0xffffff, 1.0 );
@@ -52,18 +52,12 @@ function init() {
 		mouseIsPressed = true; 
 		mousePressed();
 	});
-	renderer.domElement.addEventListener ( 'mousemove', function () { 
-		pmouseX = mouseX;
-		pmouseY = mouseY;
-		if (mouseIsPressed) {
-			mouseDragged(); 
-		}
-		mouseMoved();
-	});
+
 	renderer.domElement.addEventListener ( 'mouseup', function () { 
 		mouseIsPressed = false; 
 		mouseReleased(); 
 	});
+	document.addEventListener( 'mousemove', onDocumentMouseMove, false );
 	setup();
 	render();
 	for (var i=0; i<nframes; i++){ //adds buttons to page and initializes them
@@ -75,30 +69,45 @@ function init() {
 	}
 }
 function onWindowResize() {
-	windowHalfX=window.innerWidth/2;
-	windowHalfY=window.innerHeight/2;
-	camera.aspect=window.innerWidth/window.innerHeight;
+	windowHalfX=(window.innerWidth-20)/2;
+	windowHalfY=(window.innerHeight-50)/2;
+	camera.aspect=(window.innerWidth-20)/(window.innerHeight-50);
 	camera.updateProjectionMatrix();
 	renderer.setSize(window.innerWidth-20,window.innerHeight-50);
 }
-function onDocumentMouseMove(event) {
-	mouseX = (event.clientX-windowHalfX)/2;
-	mouseY = (event.clientY-windowHalfY)/2;
+function onDocumentMouseMove( event ) {
+	pmouseX=mouseX;
+	pmouseY=mouseY;
+	mouseX = ( event.clientX - windowHalfX ) / ((window.innerWidth-20)/2);
+	mouseY = ( event.clientY - windowHalfY ) / ((window.innerHeight-50)/2);
+	if (mouseIsPressed)
+		mouseDragged();
 }
 function render() {
 	requestAnimationFrame(render);
 	renderer.render(scene,camera);
 }
-function mouseMoved(){}
-function mousePressed(){
-
-}
+function mousePressed(){}
 function mouseDragged(){
-
+	var mouse=new THREE.Vector3(mouseX,mouseY,0);
+	var pmouse=new THREE.Vector3(pmouseX,pmouseY,0);
+	var quat=new THREE.Quaternion();
+	if (mouse.lengthSq()>0.25){ //simple rotation
+		quat.setFromAxisAngle(new THREE.Vector3(0,0,1),mouse.angleTo(pmouse)*Math.sign(mouse.cross(pmouse).z)); //multiplication must be in this order as .cross alters mouse variable
+		
+	}
+	else{ //arcball behavior
+		mouse.x=-mouse.x;
+		pmouse.x=-pmouse.x;
+		mouse.z=Math.sqrt(0.25-mouse.lengthSq());
+		pmouse.z=Math.sqrt(0.25-pmouse.lengthSq());
+		var axis=new THREE.Vector3();
+		axis.copy(mouse);
+		quat.setFromAxisAngle(axis.cross(pmouse).normalize(),mouse.angleTo(pmouse));
+	}
+	myobject.applyQuaternion(quat);
 }
-function mouseReleased(){
-
-}
+function mouseReleased(){}
 function setup(){
 	document.onkeypress=keyPressed;
 	document.onwheel=wheelRolled;
@@ -107,15 +116,27 @@ function keyPressed(event){
 	switch(event.keyCode){
 		case 37: //left arrow pressed
 			myobject.position.x-=0.5;
+			for (i=0;i<nframes;i++)
+				if (keyframePos[i]!=undefined)
+					keyframePos[i].x-=0.5;
 			break;
 		case 38: //up arrow pressed
 			myobject.position.y+=0.5;
+			for (i=0;i<nframes;i++)
+				if (keyframePos[i]!=undefined)
+					keyframePos[i].y+=0.5;
 			break;
 		case 39: //right arrow pressed
 			myobject.position.x+=0.5;
+			for (i=0;i<nframes;i++)
+				if (keyframePos[i]!=undefined)
+					keyframePos[i].x+=0.5;
 			break;
 		case 40: //down arrow pressed
 			myobject.position.y-=0.5;
+			for (i=0;i<nframes;i++)
+				if (keyframePos[i]!=undefined)
+					keyframePos[i].y-=0.5;
 			break;
 		default: //toggle animation
 			animating=!animating;
@@ -123,10 +144,19 @@ function keyPressed(event){
 	}
 }
 function wheelRolled(event){
-	if (event.deltaY<0) //zoom in
+	if (event.deltaY<0){ //zoom in
 		myobject.position.z+=0.5;
-	else //zoom out
+		for (i=0;i<nframes;i++)
+			if (keyframePos[i]!=undefined)
+				keyframePos[i].z+=0.5;
+	}
+	else{ //zoom out
 		myobject.position.z-=0.5;
+		for (i=0;i<nframes;i++)
+			if (keyframePos[i]!=undefined){
+				keyframePos[i].z-=0.5;
+			}
+	}
 }
 function keyframeClicked(index){
 	if (keyframePos[index]){ //if button is already selected
