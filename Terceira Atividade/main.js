@@ -1,10 +1,10 @@
 var container;
 var camera, scene, renderer;
-var mouseX = 0, mouseY = 0, pmouseX=0, pmouseY=0;
-var windowHalfX = (window.innerWidth-20) / 2;
-var windowHalfY = (window.innerHeight-50) / 2;
-var beginsX=8; //coordinates to canvas/render top-left corner
-var beginsY=60;
+var mouseX = 0, mouseY = 0, pmouseX=0, pmouseY=0, rawmouseX=0, rawmouseY=0, prawmouseX, prawmouseY=0;
+var borderX=20, borderY=50; //borders from left side and bottom
+var windowHalfX = (window.innerWidth-borderX) / 2;
+var windowHalfY = (window.innerHeight-borderY) / 2;
+var beginsX=8, beginsY=60; //coordinates to canvas/render top-left corner
 var myobject; //object shown
 var animating=false; //true if animation is playing
 var nframes=20; //maximum number of keyframes
@@ -12,6 +12,7 @@ var interpolationsteps=10; //number of positions between keyframes
 var keyframePos={}; //object position in each keyframe
 var keyframeQuat={}; //object quaternion in each keyframe
 var selectedkeyframes=0; //number of keyframes selected now
+var mousebutton;
 init();
 function init() {
 	//based on three.js example
@@ -51,7 +52,8 @@ function init() {
 	mouseY = 0;
 	pmouseX = 0;
 	pmouseY = 0;
-	renderer.domElement.addEventListener ( 'mousedown', function () {
+	renderer.domElement.addEventListener ( 'mousedown', function (event) {
+		mousebutton=event.buttons;
 		mouseIsPressed = true; 
 		mousePressed();
 	});
@@ -71,17 +73,21 @@ function init() {
 	}
 }
 function onWindowResize() {
-	windowHalfX=(window.innerWidth-20)/2;
-	windowHalfY=(window.innerHeight-50)/2;
-	camera.aspect=(window.innerWidth-20)/(window.innerHeight-50);
+	windowHalfX=(window.innerWidth-borderX)/2;
+	windowHalfY=(window.innerHeight-borderY)/2;
+	camera.aspect=(window.innerWidth-borderX)/(window.innerHeight-borderY);
 	camera.updateProjectionMatrix();
-	renderer.setSize(window.innerWidth-20,window.innerHeight-50);
+	renderer.setSize(window.innerWidth-borderX,window.innerHeight-borderY);
 }
 function onDocumentMouseMove( event ) {
 	pmouseX=mouseX;
 	pmouseY=mouseY;
-	mouseX=(event.clientX-beginsX-windowHalfX)/((window.innerWidth-20)/2);
-	mouseY=(event.clientY-beginsY-windowHalfY)/((window.innerHeight-50)/2);
+	prawmouseX=rawmouseX;
+	prawmouseY=rawmouseY;
+	mouseX=(event.clientX-beginsX-windowHalfX)/((window.innerWidth-borderX)/2);
+	mouseY=(event.clientY-beginsY-windowHalfY)/((window.innerHeight-borderY)/2);
+	rawmouseX=event.clientX;
+	rawmouseY=event.clientY;
 	if (mouseIsPressed)
 		mouseDragged();
 }
@@ -91,32 +97,43 @@ function render() {
 }
 function mousePressed(){}
 function mouseDragged(){
-	var mouse=new THREE.Vector3(mouseX,mouseY,0);
-	var pmouse=new THREE.Vector3(pmouseX,pmouseY,0);
-	var quat=new THREE.Quaternion();
-	if (mouse.lengthSq()>0.25){ //simple rotation
-		if (isNaN(mouse.angleTo(pmouse))) return;
-		quat.setFromAxisAngle(new THREE.Vector3(0,0,1),mouse.angleTo(pmouse)*Math.sign(mouse.cross(pmouse).z)); //multiplication must be in this order as .cross alters mouse variable
-		
+	if (mousebutton==1){ //left click -> rotation
+		var mouse=new THREE.Vector3(mouseX,mouseY,0);
+		var pmouse=new THREE.Vector3(pmouseX,pmouseY,0);
+		var objpos=new THREE.Vector3(myobject.position.x,myobject.position.y,myobject.position.z);
+		objpos.project(camera);
+		objpos.z=0;
+		var quat=new THREE.Quaternion();
+		if (mouse.distanceTo(objpos)>0.5){ //simple rotation
+			if (isNaN(mouse.angleTo(pmouse))) return;
+			quat.setFromAxisAngle(new THREE.Vector3(0,0,1),mouse.angleTo(pmouse)*Math.sign(mouse.cross(pmouse).z)); //multiplication must be in this order as .cross alters mouse variable
+		}
+		else{ //arcball behavior
+			mouse.z=Math.sqrt(0.5-mouse.distanceTo(objpos));
+			pmouse.z=Math.sqrt(0.5-pmouse.distanceTo(objpos));
+			mouse.x=-mouse.x;
+			pmouse.x=-pmouse.x;
+			var axis=new THREE.Vector3();
+			axis.copy(mouse);
+			axis.cross(pmouse).normalize();
+			if (isNaN(mouse.angleTo(pmouse)) || isNaN(axis.x==NaN) || isNaN(axis.y==NaN) || isNaN(axis.z==NaN)) return;
+			quat.setFromAxisAngle(axis,mouse.angleTo(pmouse));
+		}
+		myobject.applyQuaternion(quat);
 	}
-	else{ //arcball behavior
-		mouse.x=-mouse.x;
-		pmouse.x=-pmouse.x;
-		mouse.z=Math.sqrt(0.25-mouse.lengthSq());
-		pmouse.z=Math.sqrt(0.25-pmouse.lengthSq());
-		var axis=new THREE.Vector3();
-		axis.copy(mouse);
-		axis.cross(pmouse).normalize();
-		if (isNaN(mouse.angleTo(pmouse)) || isNaN(axis.x==NaN) || isNaN(axis.y==NaN) || isNaN(axis.z==NaN)) return;
-		quat.setFromAxisAngle(axis,mouse.angleTo(pmouse));
+	else{ //right click -> translation
+		var delta=new THREE.Vector3((rawmouseX-prawmouseX)/camera.position.z,-(rawmouseY-prawmouseY)/camera.position.z,0);
+		if (myobject.position.z)
+			delta.multiplyScalar(Math.abs(myobject.position.z)/camera.position.z);
+		myobject.position.add(delta);
 	}
-	myobject.applyQuaternion(quat);
 }
 function mouseReleased(){}
 function setup(){
 	document.onkeypress=keyPressed;
 	document.onwheel=wheelRolled;
 	document.getElementById("slider").oninput=slide;
+	document.oncontextmenu=function(){return false;}; //disables context menu
 }
 function keyPressed(event){
 	switch(event.keyCode){
