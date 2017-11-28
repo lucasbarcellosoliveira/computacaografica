@@ -3,12 +3,15 @@ var camera, scene, renderer;
 var mouseX = 0, mouseY = 0, pmouseX=0, pmouseY=0;
 var windowHalfX = (window.innerWidth-20) / 2;
 var windowHalfY = (window.innerHeight-50) / 2;
+var beginsX=8; //coordinates to canvas/render top-left corner
+var beginsY=60;
 var myobject; //object shown
 var animating=false; //true if animation is playing
 var nframes=20; //maximum number of keyframes
 var interpolationsteps=10; //number of positions between keyframes
 var keyframePos={}; //object position in each keyframe
 var keyframeQuat={}; //object quaternion in each keyframe
+var selectedkeyframes=0; //number of keyframes selected now
 init();
 function init() {
 	//based on three.js example
@@ -52,7 +55,6 @@ function init() {
 		mouseIsPressed = true; 
 		mousePressed();
 	});
-
 	renderer.domElement.addEventListener ( 'mouseup', function () { 
 		mouseIsPressed = false; 
 		mouseReleased(); 
@@ -78,8 +80,8 @@ function onWindowResize() {
 function onDocumentMouseMove( event ) {
 	pmouseX=mouseX;
 	pmouseY=mouseY;
-	mouseX = ( event.clientX - windowHalfX ) / ((window.innerWidth-20)/2);
-	mouseY = ( event.clientY - windowHalfY ) / ((window.innerHeight-50)/2);
+	mouseX=(event.clientX-beginsX-windowHalfX)/((window.innerWidth-20)/2);
+	mouseY=(event.clientY-beginsY-windowHalfY)/((window.innerHeight-50)/2);
 	if (mouseIsPressed)
 		mouseDragged();
 }
@@ -114,32 +116,21 @@ function mouseReleased(){}
 function setup(){
 	document.onkeypress=keyPressed;
 	document.onwheel=wheelRolled;
+	document.getElementById("slider").oninput=slide;
 }
 function keyPressed(event){
 	switch(event.keyCode){
 		case 37: //left arrow pressed
 			myobject.position.x-=0.5;
-			for (i=0;i<nframes;i++)
-				if (keyframePos[i]!=undefined)
-					keyframePos[i].x-=0.5;
 			break;
 		case 38: //up arrow pressed
 			myobject.position.y+=0.5;
-			for (i=0;i<nframes;i++)
-				if (keyframePos[i]!=undefined)
-					keyframePos[i].y+=0.5;
 			break;
 		case 39: //right arrow pressed
 			myobject.position.x+=0.5;
-			for (i=0;i<nframes;i++)
-				if (keyframePos[i]!=undefined)
-					keyframePos[i].x+=0.5;
 			break;
 		case 40: //down arrow pressed
 			myobject.position.y-=0.5;
-			for (i=0;i<nframes;i++)
-				if (keyframePos[i]!=undefined)
-					keyframePos[i].y-=0.5;
 			break;
 		default: //toggle animation
 			animating=!animating;
@@ -164,12 +155,15 @@ function wheelRolled(event){
 function keyframeClicked(index){
 	if (keyframePos[index]){ //if button is already selected
 		keyframePos[index]=undefined;
+		keyframeQuat[index]=undefined;
 		document.getElementById("keyframe"+index).setAttribute("class", "button");
+		selectedkeyframes--;
 	}
 	else{ //if button is not selected yet
 		keyframePos[index]=new THREE.Vector3(myobject.position.x,myobject.position.y,myobject.position.z); //stores current position
 		keyframeQuat[index]=new THREE.Quaternion(myobject.quaternion.x,myobject.quaternion.y,myobject.quaternion.z,myobject.quaternion.w); //stores current quaternion
 		document.getElementById("keyframe"+index).setAttribute("class", "button selected");
+		selectedkeyframes++;
 	}
 }
 async function animate(){ //interpolate and animate
@@ -180,7 +174,6 @@ async function animate(){ //interpolate and animate
 			return;
 	}
 	while(animating){
-		myobject.position=keyframePos[start];
 		next=start+1;
 		while (keyframePos[next]==undefined){ //finds next keyframe
 			next++;
@@ -195,6 +188,29 @@ async function animate(){ //interpolate and animate
 		start=next;
 	}
 }
-function sleep(ms) { //allows waiting between frames
-  return new Promise(resolve => setTimeout(resolve, ms));
+function slide(){
+	if (selectedkeyframes<2)
+		return;
+	var startkeyframe=Math.floor(document.getElementById("slider").value/(100/selectedkeyframes));
+	var keyframenumber=0;
+	var findkeyframe=-1;
+	while (findkeyframe!=startkeyframe){
+		while (keyframePos[keyframenumber]==undefined)
+			keyframenumber++;
+		findkeyframe++;
+		keyframenumber++;
+	}
+	var start=keyframenumber-1;
+	var next=start+1;
+	while (keyframePos[next]==undefined){ //finds next keyframe
+		next++;
+		if (next==nframes)
+			next=0;
+	}
+	var alpha=(document.getElementById("slider").value-(startkeyframe*100/selectedkeyframes))/50;
+	myobject.position.lerpVectors(keyframePos[start],keyframePos[next],alpha);
+	THREE.Quaternion.slerp(keyframeQuat[start],keyframeQuat[next],myobject.quaternion,alpha);
+}
+function sleep(ms){ //allows waiting between frames
+	return new Promise(resolve => setTimeout(resolve, ms));
 }
