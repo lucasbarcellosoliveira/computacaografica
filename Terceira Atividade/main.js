@@ -4,7 +4,7 @@ var mouseX = 0, mouseY = 0, pmouseX=0, pmouseY=0, rawmouseX=0, rawmouseY=0, praw
 var borderX=20, borderY=50; //borders from left side and bottom
 var windowHalfX = (window.innerWidth-borderX) / 2;
 var windowHalfY = (window.innerHeight-borderY) / 2;
-var beginsX=8, beginsY=60; //coordinates to canvas/render top-left corner
+var beginsX=8, beginsY=63; //coordinates to canvas/render top-left corner
 var myobject; //object shown
 var animating=false; //true if animation is playing
 var nframes=20; //maximum number of keyframes
@@ -64,13 +64,6 @@ function init() {
 	document.addEventListener( 'mousemove', onDocumentMouseMove, false );
 	setup();
 	render();
-	for (var i=0; i<nframes; i++){ //adds buttons to page and initializes them
-		var button = document.createElement("btn");
-		button.setAttribute("id","keyframe"+i);
-		button.setAttribute("class","button");
-		button.addEventListener("click", keyframeClicked.bind(null,i));
-		document.getElementById("keyframes").appendChild(button);
-	}
 }
 function onWindowResize() {
 	windowHalfX=(window.innerWidth-borderX)/2;
@@ -130,6 +123,20 @@ function mouseDragged(){
 }
 function mouseReleased(){}
 function setup(){
+	var button;
+	for (var i=0; i<nframes; i++){ //adds buttons to page and initializes them
+		button = document.createElement("btn");
+		button.setAttribute("id","keyframe"+i);
+		button.setAttribute("class","button");
+		button.addEventListener("click", keyframeClicked.bind(null,i));
+		document.getElementById("keyframes").appendChild(button);
+	}
+	button = document.createElement("btn");
+	button.setAttribute("id","play");
+	button.setAttribute("class","play");
+	button.innerHTML="<b>Play</b>";
+	button.addEventListener("click", animate);
+	document.getElementById("keyframes").appendChild(button);
 	document.onkeypress=keyPressed;
 	document.onwheel=wheelRolled;
 	document.getElementById("slider").oninput=slide;
@@ -150,7 +157,6 @@ function keyPressed(event){
 			myobject.position.y-=0.5;
 			break;
 		default: //toggle animation
-			animating=!animating;
 			animate();
 	}
 }
@@ -184,14 +190,15 @@ function keyframeClicked(index){
 	}
 }
 async function animate(){ //interpolate and animate
+	if (selectedkeyframes<2) return;
+	animating=!animating;
 	var next, start=0;
-	while (keyframePos[start]==undefined){
+	while (keyframePos[start]==undefined)
 		start++;
-		if (start>=nframes) //no keyframe selected
-			return;
-	}
 	while(animating){
+		if (selectedkeyframes<2){animating=!animating; return;}
 		next=start+1;
+		if (next==nframes) next=0;
 		while (keyframePos[next]==undefined){ //finds next keyframe
 			next++;
 			if (next==nframes)
