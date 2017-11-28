@@ -14,12 +14,21 @@
     .selected {
         background-color: #91219E; /*cobaltvioletdeep*/
     }
+    .slider {
+        width: 50%;
+        height: 15px;
+    }
     </style>
     <script src="three.js"></script>
     <script src="OBJLoader.js"></script>
   </head>
   <body>
-    <center><div id="keyframes"></div></center>
+    <center>
+        <div id="keyframes"></div>
+        <div id="slidecontainer">
+            <input type="range" min="0" max="99" value="50" class="slider" id="slider">
+        </div>
+    </center>
     <script src="main.js"></script>
   </body>
 </html>
