@@ -1,7 +1,7 @@
 var container;
 var camera, scene, renderer;
 var mouseX = 0, mouseY = 0, pmouseX=0, pmouseY=0, rawmouseX=0, rawmouseY=0, prawmouseX, prawmouseY=0;
-var borderX=20, borderY=50; //borders from left side and bottom
+var borderX=25, borderY=75; //borders from left side and bottom
 var windowHalfX = (window.innerWidth-borderX) / 2;
 var windowHalfY = (window.innerHeight-borderY) / 2;
 var beginsX=8, beginsY=63; //coordinates to canvas/render top-left corner
@@ -9,6 +9,7 @@ var myobject; //object shown
 var animating=false; //true if animation is playing
 var nframes=20; //maximum number of keyframes
 var interpolationsteps=10; //number of positions between keyframes
+var sleeptime=50; //time waiting between frames in animation
 var keyframePos={}; //object position in each keyframe
 var keyframeQuat={}; //object quaternion in each keyframe
 var selectedkeyframes=0; //number of keyframes selected now
@@ -18,7 +19,7 @@ function init() {
 	//based on three.js example
 	container = document.createElement( 'div' );
 	document.body.appendChild( container );
-	camera = new THREE.PerspectiveCamera( 45, (window.innerWidth-20) / (window.innerHeight-50), 1, 2000 );
+	camera = new THREE.PerspectiveCamera( 45, (window.innerWidth-borderX) / (window.innerHeight-borderY), 1, 2000 );
 	camera.position.z = 20;
 	scene = new THREE.Scene(); //scene
 	var ambientLight = new THREE.AmbientLight( 0xffffff, 1.0 );
@@ -43,7 +44,7 @@ function init() {
 	});
 	renderer = new THREE.WebGLRenderer();
 	renderer.setPixelRatio( window.devicePixelRatio );
-	renderer.setSize( window.innerWidth-20, window.innerHeight-50 );
+	renderer.setSize( window.innerWidth-borderX, window.innerHeight-borderY );
 	container.appendChild( renderer.domElement );
 	window.addEventListener( 'resize', onWindowResize, false );
 	// based on previous assignment
@@ -189,7 +190,7 @@ function keyframeClicked(index){
 		selectedkeyframes++;
 	}
 }
-async function animate(){ //interpolate and animate
+async function animate(){ //interpolate and animate - needs to be async in order to use sleep(ms)
 	if (selectedkeyframes<2) return;
 	animating=!animating;
 	var next, start=0;
@@ -207,7 +208,7 @@ async function animate(){ //interpolate and animate
 		for (var j=1;j<=interpolationsteps;j++){
 			myobject.position.lerp(keyframePos[next],j/interpolationsteps); //linear interpolation for translation
 			myobject.quaternion.slerp(keyframeQuat[next],j/interpolationsteps); //spherical linear interpolation for rotation
-			await sleep(10); //waits 10ms between frames
+			await sleep(sleeptime); //waits sleeptime ms between frames
 		}
 		start=next;
 	}
@@ -226,12 +227,13 @@ function slide(){
 	}
 	var start=keyframenumber-1;
 	var next=start+1;
+	if (next==nframes) next=0;
 	while (keyframePos[next]==undefined){ //finds next keyframe
 		next++;
 		if (next==nframes)
 			next=0;
 	}
-	var alpha=(document.getElementById("slider").value-(startkeyframe*100/selectedkeyframes))/50;
+	var alpha=(document.getElementById("slider").value-(startkeyframe*100/selectedkeyframes))/(100/selectedkeyframes);
 	myobject.position.lerpVectors(keyframePos[start],keyframePos[next],alpha);
 	THREE.Quaternion.slerp(keyframeQuat[start],keyframeQuat[next],myobject.quaternion,alpha);
 }
